@@ -1,0 +1,16 @@
+[package]
+name = "ds3231"
+version = "0.1.0"
+authors = ["Marc Poulhiès <dkm@kataplop.net>"]
+license = "MIT OR Apache-2.0"
+categories = ["embedded", "hardware-support"]
+keywords = ["ds3231", "zs-042"]
+repository = "http://github.com/dkm/ds3231-rs.git"
+description = "A simple driver for the I2C DS3231."
+
+[dependencies.nb]
+version = "0.1.1"
+
+[dependencies.embedded-hal]
+version = "0.1.1"
+features = ["unproven"]
