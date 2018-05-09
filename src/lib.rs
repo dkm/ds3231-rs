@@ -40,7 +40,7 @@ enum DS3231Regs {
     _ControlStatus = 0xf,
     _AgingOff = 0x10,
     TempMsb = 0x11,
-    _TempLsb = 0x12
+    TempLsb = 0x12
 }
 const ADDR : u8 = 0x68u8;
 
@@ -55,13 +55,18 @@ impl<S> DS3231<S>
     }
 
     ///bob
-    pub fn get_temp(&mut self) -> u8 {
+    pub fn get_temp(&mut self) -> (u8,u8) {
         let temp_msb_reg = [ DS3231Regs::TempMsb as u8];
-        let mut temp = [0];
+        let temp_lsb_reg = [ DS3231Regs::TempLsb as u8];
+        let mut temp_buf = [0];
 
-        match self.i2c.write_read(ADDR, &temp_msb_reg, &mut temp) {
-            Ok(_) => temp[0] as u8,
-            Err(_) => 0
+        let val = match self.i2c.write_read(ADDR, &temp_msb_reg, &mut temp_buf) {
+            Ok(_) => temp_buf[0] as u8,
+            Err(_) => 0u8
+        };
+        match self.i2c.write_read(ADDR, &temp_lsb_reg, &mut temp_buf) {
+            Ok(_) => (val, (temp_buf[0] >> 6) * 25),
+            Err(_) => (val, 0)
         }
     }
 }
