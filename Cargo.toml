@@ -8,6 +8,9 @@ keywords = ["ds3231", "zs-042"]
 repository = "http://github.com/dkm/ds3231-rs.git"
 description = "A simple driver for the I2C DS3231."
 
+[dependencies]
+numtoa = "0.0.7"
+
 [dependencies.nb]
 version = "0.1.1"
 
