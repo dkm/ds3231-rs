@@ -14,7 +14,6 @@ use numtoa::NumToA;
 // extern crate nb;
 
 /// Device descriptor
-#[derive(Clone, Copy, PartialEq)]
 pub struct DS3231<S> {
     /// bob
     i2c : S,
@@ -79,8 +78,8 @@ enum DS3231Regs {
 }
 const ADDR : u8 = 0x68u8;
 
-impl<S> DS3231<S>
-    where S: hal::blocking::i2c::Write + hal::blocking::i2c::WriteRead  {
+impl<S,E> DS3231<S>
+    where S: hal::blocking::i2c::Write<Error = E> + hal::blocking::i2c::WriteRead<Error = E>  {
     
     /// Creates a new device descriptor
     pub fn new(i2c: S) -> DS3231<S> {
@@ -89,35 +88,31 @@ impl<S> DS3231<S>
         }
     }
 
-    fn get_reg(&mut self, addr : DS3231Regs) -> u8 {
+    fn get_reg(&mut self, addr : DS3231Regs) -> Result<u8, E> {
         let addr_reg = [ addr as u8];
         let mut buf = [0];
 
-        match self.i2c.write_read(ADDR, &addr_reg, &mut buf) {
-            Ok(_) => buf[0] as u8,
-            Err(_) => 0u8
-        }
+        self.i2c.write_read(ADDR, &addr_reg, &mut buf)?;
+        Ok(buf[0] as u8)
     }
 
-    fn set_reg(&mut self, addr : DS3231Regs, val: u8) {
+    fn set_reg(&mut self, addr : DS3231Regs, val: u8) -> Result<(), E> {
         let write_cmd = [ addr as u8, val];
 
         // match i2c.write(ds3231_adr, &write_seconds) {
-        match self.i2c.write(ADDR, &write_cmd) {
-            Ok(_) => (),
-            Err(_) => (),
-        }
+        self.i2c.write(ADDR, &write_cmd)?;
+        Ok(())
     }
 
 
     /// Returns the temperature as a tuple of (integer part, decimal part).
     /// Decimal part begin one of 0,25 and 75.
-    pub fn get_temp(&mut self) -> (u8,u8) {
+    pub fn get_temp(&mut self) -> Result<(u8,u8), E> {
         // let temp_msb_reg = [ DS3231Regs::TempMsb as u8];
         // let temp_lsb_reg = [ DS3231Regs::TempLsb as u8];
         // let mut temp_buf = [0];
 
-        (self.get_reg(DS3231Regs::TempMsb), self.get_reg(DS3231Regs::TempLsb))
+        Ok((self.get_reg(DS3231Regs::TempMsb)?, self.get_reg(DS3231Regs::TempLsb)?))
         // let val = match self.i2c.write_read(ADDR, &temp_msb_reg, &mut temp_buf) {
         //     Ok(_) => temp_buf[0] as u8,
         //     Err(_) => 0u8
@@ -129,34 +124,36 @@ impl<S> DS3231<S>
     }
 
     /// Returns the temperature as a float.
-    pub fn get_temp_float(&mut self) -> f32 {
-        let (int, dec) = self.get_temp();
-        int as f32 + dec as f32 / 100f32
+    pub fn get_temp_float(&mut self) -> Result<f32, E> {
+        let (int, dec) = self.get_temp()?;
+        Ok(int as f32 + (dec as f32) * 0.25)
     }
 
     /// Sets the time
-    pub fn set_time(&mut self, time : &DS3231Time) {
-        self.set_reg(DS3231Regs::Seconds, time.secs);
-        self.set_reg(DS3231Regs::Minutes, time.mins);
-        self.set_reg(DS3231Regs::Hours, time.hours);
-        self.set_reg(DS3231Regs::Day, time.wday);
+    pub fn set_time(&mut self, time : &DS3231Time) -> Result<(), E>{
+        self.set_reg(DS3231Regs::Seconds, time.secs)?;
+        self.set_reg(DS3231Regs::Minutes, time.mins)?;
+        self.set_reg(DS3231Regs::Hours, time.hours)?;
+        self.set_reg(DS3231Regs::Day, time.wday)?;
+
+        Ok(())
     }
 
     /// Returns the time from device
-    pub fn get_time(&mut self) -> DS3231Time {
+    pub fn get_time(&mut self) -> Result<DS3231Time, E> {
         let mut ret_time : DS3231Time = Default::default();
 
-        let secs_val = self.get_reg(DS3231Regs::Seconds);
+        let secs_val = self.get_reg(DS3231Regs::Seconds)?;
         ret_time.secs = (secs_val & 0xF) + (10 * (secs_val>>4));
 
-        let mins_val = self.get_reg(DS3231Regs::Minutes);
+        let mins_val = self.get_reg(DS3231Regs::Minutes)?;
         ret_time.mins = (mins_val & 0xF) + (10 * (mins_val>>4));
 
-        let hours_val = self.get_reg(DS3231Regs::Hours);
+        let hours_val = self.get_reg(DS3231Regs::Hours)?;
         ret_time.hours = (hours_val & 0xF) + (10 * (hours_val>>4));
 
-        ret_time.wday = self.get_reg(DS3231Regs::Day);
+        ret_time.wday = self.get_reg(DS3231Regs::Day)?;
 
-        ret_time
+        Ok(ret_time)
     }
 }
