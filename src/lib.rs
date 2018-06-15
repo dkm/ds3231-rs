@@ -22,16 +22,44 @@ pub struct DS3231<S> {
 /// Time struct
 #[derive(Clone, Copy, PartialEq, Default)]
 pub struct DS3231Time {
-    secs : u8,
-    mins : u8,
-    hours : u8,
-    wday : u8,
-    mday : u8,
-    month : u8,
-    year : u8
+    /// Seconds
+    pub secs : u8,
+    /// Minutes
+    pub mins : u8,
+    /// Hours
+    pub hours : u8,
+    /// Weekday
+    pub wday : u8,
+    /// Day of the month
+    pub mday : u8,
+    /// Month
+    pub month : u8,
+    /// Year
+    pub year : u8
 }
 
 impl DS3231Time {
+    /// Returns a simple hour/min string
+    pub fn get_hour_min(&self, buf : &mut [u8]) {
+        let mut digits = [0u8;4];
+
+        let s = self.hours.numtoa(10, &mut digits);
+        if s == 3 {
+            buf[1] = digits[s];
+        } else {
+            buf[0] = digits[s];
+            buf[1] = digits[s+1];
+        }
+
+        let s = self.mins.numtoa(10, &mut digits);
+        if s == 3 {
+            buf[3] = digits[s];
+        } else {
+            buf[2] = digits[s];
+            buf[3] = digits[s+1];
+        }
+    }
+
     /// Returns simple string
     pub fn get_simple(&self, buf : &mut [u8]) {
         let mut digits = [0u8;4];
